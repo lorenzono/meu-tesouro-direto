@@ -1,82 +1,103 @@
 import React, { useState } from 'react';
 import './App.css';
 import dataset from './dataset.json'
-import { VictoryChart, VictoryLine, VictoryTheme, VictoryAxis, VictoryTooltip, VictoryVoronoiContainer } from 'victory'
+import { VictoryChart, VictoryLine, VictoryTheme, VictoryAxis, VictoryTooltip, VictoryVoronoiContainer, createContainer } from 'victory'
 
-export default function App() {
+const data = dataset
+  .filter(titulo => titulo.tipo === 'ipca')
+  .filter(titulo => titulo.vencimento === '2035-05-15') // É melhor filtrar ou criar um novo objeto?
+  .sort((a, b) => a.dataBase < b.dataBase ? -1 : 1) // Descobri o problema da ordem dos dados! O dataset não está ordenado pela data OTL. O Victory não consegue ajeitar isso?
+  .map(({ tipo, vencimento, ...properties }) => properties) // É melhor deletar ou criar um novo objeto sem as propriedades?
+// .map(titulo => titulo.precoVenda.toString().replace(".", ","))
 
-  // const [bonds, setBonds] = useState({})
+// const newDatas = data // Acho que também não preciso mais disso
 
-  const data = dataset
-    .filter(titulo => titulo.tipo === 'ipca')
-    .filter(titulo => titulo.vencimento === '2035-05-15') // É melhor filtrar ou criar um novo objeto?
-    .sort((a, b) => a.dataBase < b.dataBase ? -1 : 1) // Descobri o problema da ordem dos dados! O dataset não está ordenado pela data OTL. O Victory não consegue ajeitar isso?
-    .map(({ tipo, vencimento, ...properties }) => properties) // É melhor deletar ou criar um novo objeto sem as propriedades?
-  // .map(titulo => titulo.precoVenda.toString().replace(".", ","))
+data.length = 201 // Descobri que não preciso mais disso! O problema estava na ordem do dataset
 
-  // const newDatas = data // Acho que também não preciso mais disso
+// console.log(newDatas)
 
-  // data.length = 120 // Descobri que não preciso mais disso! O problema estava na ordem do dataset
+let arr = []
+let tickValue = []
+let i = 0
+let j = 0
 
-  // console.log(newDatas)
+for (i; i < data.length; i++) {
+  if (i % 100 === 0) {
+    arr.push(data[i].dataBase)
+  } else {
+    arr.push(undefined)
+  }
+}
 
-  let arr = []
-  let tickValue = []
-  let i = 0
-  let j = 0
+for (j; j < data.length; j++) {
+  tickValue.push(j + 1)
+}
 
-  for (i; i < data.length; i++) {
-    if (i % 100 === 0) {
-      arr.push(data[i].dataBase)
-    } else {
-      arr.push(undefined)
+const VictoryZoomVoronoiContainer = createContainer("zoom", "voronoi");
+
+class App extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+
     }
   }
 
-  for (j; j < data.length; j++) {
-    tickValue.push(j + 1)
+  onDomainChange(domain) {
+    this.setState({
+      zoomedXDomain: domain.x,
+    });
   }
 
-  console.log(arr)
+  getData() {
+    const { zoomedXDomain } = this.state;
+    const { data } = this.props;
+    return data.filter(
+      // is d "between" the ends of the visible x-domain?
+      (d) => (d.x >= zoomedXDomain[0] && d.x <= zoomedXDomain[1]));
+  }
 
-  console.log(tickValue)
-
-  return (
-    <>
-      <div>
-        Testando coisas heheheh
+  render() {
+    return (
+      <>
+        <div>
+          Testando coisas heheheh
       </div>
-      <VictoryChart
-        // theme={VictoryTheme.material}
-        // domainPadding={20}
-        // padding={70}
-        containerComponent={<VictoryVoronoiContainer
-          labels={({ datum }) => `${datum.dataBase}
+        <VictoryChart
+          // theme={VictoryTheme.material}
+          // domainPadding={20}
+          // padding={70}
+          containerComponent={<VictoryZoomVoronoiContainer
+            onZoomDomainChange={this.onDomainChange.bind(this)}
+            labels={({ datum }) => `${datum.dataBase}
           ${datum.precoVenda}`} />}
-      >
-        <VictoryAxis
-          // scale='time'
-          style={{
-            tickLabels: { angle: -30, fontSize: 5 }
-          }}
-          tickValues={tickValue}
-          tickFormat={arr}
-        />
-        <VictoryAxis
-          dependentAxis
-        // tickFormat={y => `R$ ${y},00`}
-        />
-        <VictoryLine
-          style={{
-            data: { stroke: "#c43a31", strokeWidth: 0.5 },
-            // parent: { border: "1px solid #ccc" }
-          }}
-          // labelComponent={<VictoryTooltip />} Isso não funciona em Line
-          data={data}
-          x="dataBase"
-          y="precoVenda"
-        />
-      </VictoryChart>
-    </>
-  );
+        >
+          <VictoryAxis
+            // scale='time'
+            style={{
+              tickLabels: { angle: 330, fontSize: 5 }
+            }}
+            tickValues={tickValue}
+            tickFormat={arr}
+          />
+          <VictoryAxis
+            dependentAxis
+          // tickFormat={y => `R$ ${y},00`}
+          />
+          <VictoryLine
+            style={{
+              data: { stroke: "#c43a31", strokeWidth: 0.5 },
+              // parent: { border: "1px solid #ccc" }
+            }}
+            // labelComponent={<VictoryTooltip />} Isso não funciona em Line
+            data={data}
+            x="dataBase"
+            y="precoVenda"
+          />
+        </VictoryChart>
+      </>
+    );
+  }
 }
+
+export default App;
